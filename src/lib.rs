@@ -8,10 +8,25 @@ mod slice;
 pub use slice::*;
 
 pub trait ArrayExt<T, const N: usize>: Sized {
+    /// Split an array into two smaller arrays
+    ///
+    /// ```
+    /// use cl_array_ext::ArrayExt;
+    /// let (a, b) = [1_i32, 2, 3, 4, 5].array_split_at::<3>();
+    /// assert_eq!(a, [1, 2, 3]);
+    /// assert_eq!(b, [4, 5]);
+    /// ```
     fn array_split_at<const M: usize>(self) -> ([T; M], [T; N - M])
     where
         [T; N - M]: Sized;
 
+    /// Take only M elements out of the array
+    ///
+    /// ```
+    /// use cl_array_ext::ArrayExt;
+    /// let a = [1, 2, 3, 4, 5].truncate::<3>();
+    /// assert_eq!(a, [1, 2, 3]);
+    /// ```
     fn truncate<const M: usize>(self) -> [T; M]
     where
         [T; N - M]: Sized,
@@ -19,6 +34,13 @@ pub trait ArrayExt<T, const N: usize>: Sized {
         self.array_split_at().0
     }
 
+    /// Join two arrays into one larger array
+    ///
+    /// ```
+    /// use cl_array_ext::ArrayExt;
+    /// let a = [1_i32, 2, 3].append([4, 5]);
+    /// assert_eq!(a, [1, 2, 3, 4, 5]);
+    /// ```
     fn append<const M: usize>(self, other: [T; M]) -> [T; N + M];
 }
 
@@ -57,11 +79,9 @@ mod tests {
 
     #[test]
     fn split_at() {
-        let a = [1, 2, 3, 4, 5];
-        let (b, c) = a.array_split_at::<3>();
-
-        assert_eq!(b, [1, 2, 3]);
-        assert_eq!(c, [4, 5]);
+        let (a, b) = [1, 2, 3, 4, 5].array_split_at::<3>();
+        assert_eq!(a, [1, 2, 3]);
+        assert_eq!(b, [4, 5]);
     }
 
     #[test]

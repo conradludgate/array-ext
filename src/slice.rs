@@ -1,3 +1,15 @@
+/// A slice with at least N elements. Can be dereferenced back into a regular slice on demand.
+///
+/// ```
+/// use cl_array_ext::SliceN;
+/// let a: &mut [_] = &mut [1, 2, 3, 4, 5];
+/// let b: &mut SliceN<_, 3> = a.try_into().unwrap();
+///
+/// b.head = [3, 2, 1];
+/// b.tail.reverse();
+///
+/// assert_eq!(a, [3, 2, 1, 5, 4]);
+/// ```
 #[repr(C)]
 pub struct SliceN<T, const N: usize> {
     pub head: [T; N],
@@ -5,14 +17,6 @@ pub struct SliceN<T, const N: usize> {
 }
 
 impl<T, const N: usize> SliceN<T, N> {
-    pub fn len(&self) -> usize {
-        N + self.tail.len()
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
-    }
-
     /// Convert a slice into one that is guaranteed to have at least N elements
     /// # Panics
     /// The length of the slice must be >= N, otherwise this will panic
@@ -46,6 +50,7 @@ impl<'a, T, const N: usize> TryFrom<&'a [T]> for &'a SliceN<T, N> {
         }
     }
 }
+
 impl<'a, T, const N: usize> TryFrom<&'a mut [T]> for &'a mut SliceN<T, N> {
     type Error = NotEnoughEntries;
     fn try_from(value: &'a mut [T]) -> Result<Self, Self::Error> {
@@ -61,8 +66,7 @@ use core::fmt;
 impl<T: fmt::Debug, const N: usize> fmt::Debug for SliceN<T, N> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_list()
-            .entries(self.head.iter())
-            .entries(self.tail.iter())
+            .entries(self.iter())
             .finish()
     }
 }
