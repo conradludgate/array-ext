@@ -3,10 +3,12 @@
 #![no_std]
 #![allow(incomplete_features)]
 #![feature(generic_const_exprs, ptr_metadata)]
+#![warn(clippy::pedantic, missing_docs)]
 
 mod slice;
 pub use slice::*;
 
+/// Trait that extends upon [array]
 pub trait ArrayExt<T, const N: usize>: Sized {
     /// Split an array into two smaller arrays
     ///
@@ -52,8 +54,8 @@ impl<T, const N: usize> ArrayExt<T, N> for [T; N] {
         let arr = core::mem::ManuallyDrop::new(self).as_ptr();
         unsafe {
             (
-                core::ptr::read(arr.add(0) as *const _),
-                core::ptr::read(arr.add(M) as *const _),
+                core::ptr::read(arr.add(0).cast()),
+                core::ptr::read(arr.add(M).cast()),
             )
         }
     }
@@ -61,8 +63,8 @@ impl<T, const N: usize> ArrayExt<T, N> for [T; N] {
     fn append<const M: usize>(self, other: [T; M]) -> [T; N + M] {
         let arr_a = core::mem::ManuallyDrop::new(self).as_ptr();
         let arr_b = core::mem::ManuallyDrop::new(other).as_ptr();
-        let mut arr_c = core::mem::MaybeUninit::uninit();
-        let p = arr_c.as_mut_ptr() as *mut T;
+        let mut arr_c = core::mem::MaybeUninit::<[T; N + M]>::uninit();
+        let p = arr_c.as_mut_ptr().cast::<T>();
 
         unsafe {
             core::ptr::copy(arr_a, p.add(0), N);

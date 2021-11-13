@@ -11,8 +11,11 @@
 /// assert_eq!(a, [3, 2, 1, 5, 4]);
 /// ```
 #[repr(C)]
+#[allow(clippy::module_name_repetitions)]
 pub struct SliceN<T, const N: usize> {
+    /// Head of the slice, where N items are guaranteed to exist
     pub head: [T; N],
+    /// Tail of the slice, may be empty
     pub tail: [T],
 }
 
@@ -38,8 +41,10 @@ impl<T, const N: usize> SliceN<T, N> {
     }
 }
 
+/// Error type returned by the [`TryFrom`] implementations for [`SliceN`]
 #[derive(Debug)]
 pub struct NotEnoughEntries;
+
 impl<'a, T, const N: usize> TryFrom<&'a [T]> for &'a SliceN<T, N> {
     type Error = NotEnoughEntries;
     fn try_from(value: &'a [T]) -> Result<Self, Self::Error> {
@@ -93,8 +98,6 @@ impl<T, const N: usize> DerefMut for SliceN<T, N> {
 
 #[cfg(test)]
 mod tests {
-    use core::ops::Deref;
-
     use crate::SliceN;
 
     #[test]
@@ -105,7 +108,7 @@ mod tests {
         assert_eq!(b.len(), 5);
         assert_eq!(b.head, [1, 2, 3]);
         assert_eq!(b.tail, [4, 5]);
-        assert_eq!(b.deref(), a);
+        assert_eq!(&**b, a);
 
         let _ = <&SliceN<_, 6>>::try_from(a).unwrap_err();
     }
