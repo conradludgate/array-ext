@@ -20,6 +20,62 @@ pub struct SliceN<T, const N: usize> {
 }
 
 impl<T, const N: usize> SliceN<T, N> {
+    /// Increases the bounds of the slice into a new known length.
+    /// # Safety
+    /// There must be at least M elements in the tail available, otherwise this will result in UB
+    pub unsafe fn increase_unchecked<const M: usize>(&self) -> &SliceN<T, { N + M }> {
+        let (p, meta) = (self as *const SliceN<T, N>).to_raw_parts();
+        &*core::ptr::from_raw_parts(p, meta - M)
+    }
+
+    /// Increases the bounds of the slice into a new known length.
+    /// # Safety
+    /// There must be at least M elements in the tail available, otherwise this will result in UB
+    pub unsafe fn increase_unchecked_mut<const M: usize>(&mut self) -> &mut SliceN<T, { N + M }> {
+        let (p, meta) = (self as *mut SliceN<T, N>).to_raw_parts();
+        &mut *core::ptr::from_raw_parts_mut(p, meta - M)
+    }
+
+    /// Increases the bounds of the slice into a new known length.
+    /// # Errors
+    /// There should be at least M elements in the tail available, otherwise this will return an error
+    pub fn increase<const M: usize>(&self) -> Result<&SliceN<T, { N + M }>, NotEnoughEntries> {
+        if self.tail.len() < M {
+            Err(NotEnoughEntries)
+        } else {
+            unsafe { Ok(self.increase_unchecked::<M>()) }
+        }
+    }
+
+    /// Increases the bounds of the slice into a new known length.
+    /// # Errors
+    /// There should be at least M elements in the tail available, otherwise this will return an error
+    pub fn increase_mut<const M: usize>(
+        &mut self,
+    ) -> Result<&mut SliceN<T, { N + M }>, NotEnoughEntries> {
+        if self.tail.len() < M {
+            Err(NotEnoughEntries)
+        } else {
+            unsafe { Ok(self.increase_unchecked_mut::<M>()) }
+        }
+    }
+
+    /// Decreases the bounds of the slice to a smaller known length.
+    pub fn downsize<const M: usize>(&self) -> &SliceN<T, M>
+    where
+        [T; N - M]: Sized, // M <= N
+    {
+        unsafe { SliceN::<T, M>::from_unchecked(self) }
+    }
+
+    /// Decreases the bounds of the slice to a smaller known length.
+    pub fn downsize_mut<const M: usize>(&mut self) -> &mut SliceN<T, M>
+    where
+        [T; N - M]: Sized, // M <= N
+    {
+        unsafe { SliceN::<T, M>::from_unchecked_mut(self) }
+    }
+
     /// Convert a slice into one that is guaranteed to have at least N elements
     /// # Safety
     /// The length of the slice must be >= N, otherwise this will result in UB
@@ -70,13 +126,12 @@ impl<'a, T, const N: usize> TryFrom<&'a mut [T]> for &'a mut SliceN<T, N> {
 use core::fmt;
 impl<T: fmt::Debug, const N: usize> fmt::Debug for SliceN<T, N> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_list()
-            .entries(self.iter())
-            .finish()
+        f.debug_list().entries(self.iter()).finish()
     }
 }
 
 use core::ops::{Deref, DerefMut};
+
 impl<T, const N: usize> Deref for SliceN<T, N> {
     type Target = [T];
     fn deref(&self) -> &Self::Target {
@@ -110,6 +165,10 @@ mod tests {
         assert_eq!(b.tail, [4, 5]);
         assert_eq!(&**b, a);
 
+        let b = b.increase::<2>().unwrap();
+        assert_eq!(b.head, [1, 2, 3, 4, 5]);
+        assert_eq!(b.tail, []);
+        let _ = b.increase::<1>().unwrap_err();
         let _ = <&SliceN<_, 6>>::try_from(a).unwrap_err();
     }
 
@@ -119,7 +178,8 @@ mod tests {
         let b: &mut SliceN<_, 3> = a.try_into().unwrap();
 
         b.head = [3, 2, 1];
+        b.downsize_mut::<2>().head = [9, 8];
 
-        assert_eq!(a, [3, 2, 1, 4, 5]);
+        assert_eq!(a, [9, 8, 1, 4, 5]);
     }
 }
