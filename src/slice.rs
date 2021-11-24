@@ -21,23 +21,23 @@ pub struct SliceN<T, const N: usize> {
 
 impl<T, const N: usize> SliceN<T, N> {
     /// Convert a slice into one that is guaranteed to have at least N elements
-    /// # Panics
-    /// The length of the slice must be >= N, otherwise this will panic
-    pub fn from_unchecked(slice: &[T]) -> &Self {
+    /// # Safety
+    /// The length of the slice must be >= N, otherwise this will result in UB
+    pub unsafe fn from_unchecked(slice: &[T]) -> &Self {
         // extract the pointer metadata for the slice
         let (p, meta) = (slice as *const [T]).to_raw_parts();
         // convert the address and meta back into a ref
-        unsafe { &*core::ptr::from_raw_parts(p, meta - N) }
+        &*core::ptr::from_raw_parts(p, meta - N)
     }
 
     /// Convert a mut slice into one that is guaranteed to have at least N elements
-    /// # Panics
-    /// The length of the slice must be >= N, otherwise this will panic
-    pub fn from_unchecked_mut(slice: &mut [T]) -> &mut Self {
+    /// # Safety
+    /// The length of the slice must be >= N, otherwise this will result in UB
+    pub unsafe fn from_unchecked_mut(slice: &mut [T]) -> &mut Self {
         // extract the pointer metadata for the slice
         let (p, meta) = (slice as *mut [T]).to_raw_parts();
         // convert the address and meta back into a ref
-        unsafe { &mut *core::ptr::from_raw_parts_mut(p, meta - N) }
+        &mut *core::ptr::from_raw_parts_mut(p, meta - N)
     }
 }
 
@@ -51,7 +51,7 @@ impl<'a, T, const N: usize> TryFrom<&'a [T]> for &'a SliceN<T, N> {
         if value.len() < N {
             Err(NotEnoughEntries)
         } else {
-            Ok(SliceN::<T, N>::from_unchecked(value))
+            unsafe { Ok(SliceN::<T, N>::from_unchecked(value)) }
         }
     }
 }
@@ -62,7 +62,7 @@ impl<'a, T, const N: usize> TryFrom<&'a mut [T]> for &'a mut SliceN<T, N> {
         if value.len() < N {
             Err(NotEnoughEntries)
         } else {
-            Ok(SliceN::<T, N>::from_unchecked_mut(value))
+            unsafe { Ok(SliceN::<T, N>::from_unchecked_mut(value)) }
         }
     }
 }
