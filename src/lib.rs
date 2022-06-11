@@ -51,24 +51,24 @@ impl<T, const N: usize> ArrayExt<T, N> for [T; N] {
     where
         [T; N - M]: Sized,
     {
-        let arr = core::mem::ManuallyDrop::new(self).as_ptr();
+        let arr = core::mem::ManuallyDrop::new(self);
         unsafe {
             (
-                core::ptr::read(arr.add(0).cast()),
-                core::ptr::read(arr.add(M).cast()),
+                core::ptr::read(arr.as_ptr().add(0).cast()),
+                core::ptr::read(arr.as_ptr().add(M).cast()),
             )
         }
     }
 
     fn append<const M: usize>(self, other: [T; M]) -> [T; N + M] {
-        let arr_a = core::mem::ManuallyDrop::new(self).as_ptr();
-        let arr_b = core::mem::ManuallyDrop::new(other).as_ptr();
+        let arr_a = core::mem::ManuallyDrop::new(self);
+        let arr_b = core::mem::ManuallyDrop::new(other);
         let mut arr_c = core::mem::MaybeUninit::<[T; N + M]>::uninit();
         let p = arr_c.as_mut_ptr().cast::<T>();
 
         unsafe {
-            core::ptr::copy(arr_a, p.add(0), N);
-            core::ptr::copy(arr_b, p.add(N), M);
+            core::ptr::copy(arr_a.as_ptr(), p.add(0), N);
+            core::ptr::copy(arr_b.as_ptr(), p.add(N), M);
 
             core::mem::MaybeUninit::assume_init(arr_c)
         }
